@@ -2,9 +2,7 @@
 
 ## Overview
 
-This project is a simulated real-time website analytics system for a data management course.
-
-We will generate stateless events while putting random/varying levels of stress on our server. We will record associated latency metrics/event details in kafka, and use flink to create a real time dashboard showcasing things like end to end latency and other metrics. We will run schedule ETL job with airflow to clean and load our data from kafka to Snowflake, and run some aggregations/higher-scale analytics in snowflake.
+This project is a simulated real-time website analytics system for a data management course. We will generate stateless events while putting random/varying levels of stress on our server. We will record associated latency metrics/event details in kafka, and use flink to create a real time dashboard showcasing things like end to end latency and other metrics. We will run schedule ETL job with airflow to clean and load our data from kafka to Snowflake, and run some aggregations/higher-scale analytics in snowflake.
 ---
 
 ## Event Format
