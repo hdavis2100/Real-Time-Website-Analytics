@@ -18,6 +18,7 @@ We will generate stateless events while putting random/varying levels of stress 
   "region": "us-east"
 }
 
+```
 ---
 
 ## Setup
