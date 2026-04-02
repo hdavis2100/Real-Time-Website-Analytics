@@ -17,3 +17,18 @@ We will generate stateless events while putting random/varying levels of stress 
   "timestamp": 1710000004000,
   "region": "us-east"
 }
+
+---
+
+## Setup
+
+1. Install Node.js and Docker Desktop
+2. Clone the repo
+3. Run `npm install`
+4. Run `cp .env.example .env`
+5. Start Kafka: `docker compose -f docker-compose.kafka.yml up -d`
+6. Start the API: `npm run start`
+
+Optional:
+- Consume Kafka messages: `npm run consume`
+- Send test traffic: `npm run simulate`
