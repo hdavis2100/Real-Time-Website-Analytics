@@ -1,4 +1,4 @@
-// Generates synthetic events and sends them to the server at a specified rate.
+// Generates synthetic poker hand events and sends them to the server at a specified rate.
 const DEFAULTS = {
   baseUrl: "http://localhost:3000",
   rps: 10,
@@ -6,6 +6,7 @@ const DEFAULTS = {
 };
 
 let shouldStop = false;
+let nextHandId = 1;
 
 function parseArgs() {
   const args = process.argv.slice(2);
@@ -26,21 +27,126 @@ function randomChoice(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function buildDeck() {
+  const ranks = ["A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2"];
+  const suits = ["s", "h", "d", "c"];
+  const deck = [];
+
+  for (const rank of ranks) {
+    for (const suit of suits) {
+      deck.push(`${rank}${suit}`);
+    }
+  }
+
+  return deck;
+}
+
+function drawStartingHand() {
+  const deck = buildDeck();
+
+  const firstIndex = randomInt(0, deck.length - 1);
+  const firstCard = deck.splice(firstIndex, 1)[0];
+
+  const secondIndex = randomInt(0, deck.length - 1);
+  const secondCard = deck[secondIndex];
+
+  return `${firstCard}${secondCard}`;
+}
+
+function getPositions(playerCount) {
+  if (playerCount <= 2) return ["SB", "BB"];
+  if (playerCount === 3) return ["BTN", "SB", "BB"];
+  if (playerCount === 4) return ["CO", "BTN", "SB", "BB"];
+  if (playerCount === 5) return ["HJ", "CO", "BTN", "SB", "BB"];
+  return ["UTG", "HJ", "CO", "BTN", "SB", "BB"];
+}
+
+function generateStakePlayed() {
+  const examples = [
+    "1sb",
+    "1 sb",
+    "1bb",
+    "1 bb",
+    "2bb",
+    "2 bb",
+    "2.5bb",
+    "2.5 bb",
+    "3bb",
+    "3 bb",
+    "4bb",
+    "4 bb",
+    "5bb",
+    "5 bb",
+    "10bb"
+  ];
+
+  return randomChoice(examples);
+}
+
+function generateOutcome() {
+  const possibleOutcomes = [
+    -20,
+    -15,
+    -12,
+    -10,
+    -8,
+    -6,
+    -5,
+    -4,
+    -3,
+    -2,
+    -1.5,
+    -1,
+    -0.5,
+    0,
+    0.5,
+    1,
+    1.5,
+    2,
+    3,
+    4,
+    5,
+    6,
+    8,
+    10,
+    12,
+    15,
+    20
+  ];
+
+  return randomChoice(possibleOutcomes);
+}
+
+function generateHandId() {
+  const handId = `hand_${nextHandId}`;
+  nextHandId += 1;
+  return handId;
+}
+
 function generateEvent() {
-  const eventTypes = ["page_view", "click", "purchase", "signup"];
-  const regions = ["us-east", "us-west", "eu-central", "ap-south"];
+  const numberOfPlayers = randomInt(2, 6);
+  const positions = getPositions(numberOfPlayers);
 
   return {
-    event_type: randomChoice(eventTypes),
-    timestamp: Date.now(),
-    region: randomChoice(regions)
+    handId: generateHandId(),
+    userId: `user_${randomInt(1, 1000000)}`,
+    startingHand: drawStartingHand(),
+    position: randomChoice(positions),
+    numberOfPlayers,
+    stakePlayed: generateStakePlayed(),
+    outcome: generateOutcome(),
+    timestamp: Date.now()
   };
 }
 
 async function sendEvent(baseUrl) {
   const event = generateEvent();
 
-  const res = await fetch(`${baseUrl}/api/events`, {
+  const res = await fetch(`${baseUrl}/api/poker-hands`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
@@ -55,7 +161,7 @@ async function sendEvent(baseUrl) {
 }
 
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function printStats(stats, startedAt) {
@@ -119,7 +225,7 @@ process.on("SIGTERM", () => {
   shouldStop = true;
 });
 
-run(parseArgs()).catch(err => {
+run(parseArgs()).catch((err) => {
   console.error("Fatal error:", err.message);
   process.exit(1);
 });

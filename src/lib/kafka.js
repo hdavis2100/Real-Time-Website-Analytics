@@ -70,11 +70,13 @@ export async function publishEvents(events) {
     topic,
     acks: -1,
     messages: events.map((event) => ({
+      key: String(event.userId ?? ""),
       value: JSON.stringify(event),
       timestamp: String(Date.now()),
       headers: {
-        event_type: String(event.event_type),
-        region: String(event.region)
+        hand_id: String(event.handId ?? ""),
+        user_id: String(event.userId ?? ""),
+        position: String(event.position ?? "")
       }
     }))
   });
