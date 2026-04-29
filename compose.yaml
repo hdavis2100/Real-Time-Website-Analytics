@@ -1,0 +1,299 @@
+# Containerized development stack for the poker analytics platform.
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: rta-postgres
+    environment:
+      POSTGRES_DB: poker_app
+      POSTGRES_USER: poker
+      POSTGRES_PASSWORD: poker
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U poker -d poker_app"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: rta-redis
+    command: >
+      redis-server --save "" --appendonly no
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+    ports:
+      - "6379:6379"
+
+  kafka:
+    image: apache/kafka:4.2.0
+    container_name: rta-kafka
+    ports:
+      - "9092:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -lc '</dev/tcp/127.0.0.1/9092'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT_HOST://0.0.0.0:9092,PLAINTEXT_DOCKER://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT_HOST://localhost:9092,PLAINTEXT_DOCKER://kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,PLAINTEXT_DOCKER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_DOCKER
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 6
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    container_name: rta-app
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      APP_DATABASE_URL: postgresql://poker:poker@postgres:5432/poker_app
+      SNOWFLAKE_PRIVATE_KEY_FILE: /usr/src/app/secrets/snowflake/rsa_key.p8
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_CLIENT_ID: real-time-analytics-api
+      KAFKA_TOPIC_SIMULATION_REQUESTS: poker.simulation_requests
+      KAFKA_TOPIC_ACTIONS: poker.actions
+      KAFKA_TOPIC_HAND_SUMMARIES: poker.hand_summaries
+      KAFKA_TOPIC_SIMULATION_EVENTS: poker.simulation_events
+      REDIS_URL: redis://redis:6379/0
+      KAFKA_CREATE_TOPIC: "true"
+      KAFKA_TOPIC_PARTITIONS: 6
+      KAFKA_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - ./secrets/snowflake:/usr/src/app/secrets/snowflake:ro
+
+  simulation-worker:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    container_name: rta-simulation-worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      bash -lc "python3 -m simulator.worker --brokers kafka:29092 --requests-topic poker.simulation_requests --actions-topic poker.actions --summaries-topic poker.hand_summaries --events-topic poker.simulation_events --concurrency $${SIMULATION_WORKER_CONCURRENCY:-6} --max-poll-interval-ms $${SIMULATION_WORKER_MAX_POLL_INTERVAL_MS:-1800000}"
+    environment:
+      SNOWFLAKE_PRIVATE_KEY_FILE: /usr/src/app/secrets/snowflake/rsa_key.p8
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_TOPIC_SIMULATION_REQUESTS: poker.simulation_requests
+      KAFKA_TOPIC_ACTIONS: poker.actions
+      KAFKA_TOPIC_HAND_SUMMARIES: poker.hand_summaries
+      KAFKA_TOPIC_SIMULATION_EVENTS: poker.simulation_events
+      REDIS_URL: redis://redis:6379/0
+      SIMULATION_WORKER_LEGACY_REGISTRY_ENABLED: "false"
+      SIMULATION_WORKER_CONCURRENCY: "6"
+      SIMULATION_WORKER_MAX_POLL_INTERVAL_MS: "1800000"
+    volumes:
+      - ./secrets/snowflake:/usr/src/app/secrets/snowflake:ro
+
+  simulation-event-projector:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    container_name: rta-simulation-event-projector
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    command: >
+      bash -lc "node simulation/scripts/project-simulation-events.js --topic poker.simulation_events --group-id poker-simulation-event-projector"
+    environment:
+      APP_DATABASE_URL: postgresql://poker:poker@postgres:5432/poker_app
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_CLIENT_ID: real-time-analytics-simulation-event-projector
+      KAFKA_TOPIC_SIMULATION_EVENTS: poker.simulation_events
+      KAFKA_SIMULATION_EVENT_PROJECTOR_FROM_BEGINNING: "false"
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/app/Dockerfile
+    container_name: rta-dashboard
+    env_file:
+      - .env
+    depends_on:
+      app:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    command: >
+      bash -lc "python3 -m streamlit run dashboard/app.py --server.port $${DASHBOARD_PORT:-8501} --server.address 0.0.0.0"
+    ports:
+      - "8501:8501"
+    environment:
+      SNOWFLAKE_PRIVATE_KEY_FILE: /usr/src/app/secrets/snowflake/rsa_key.p8
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./secrets/snowflake:/usr/src/app/secrets/snowflake:ro
+
+  spark-master:
+    image: apache/spark:3.5.8-python3
+    container_name: rta-spark-master
+    healthcheck:
+      test: ["CMD-SHELL", "bash -lc '</dev/tcp/spark-master/7077'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+    env_file:
+      - .env
+    environment:
+      HOME: /tmp
+      SPARK_MASTER_HOST: spark-master
+      SPARK_MASTER_PORT: 7077
+      SPARK_MASTER_WEBUI_PORT: 8080
+    command: >
+      bash -lc "mkdir -p /tmp/.ivy2/cache /tmp/.ivy2/jars && /opt/spark/sbin/start-master.sh && tail -f /dev/null"
+    ports:
+      - "7077:7077"
+      - "8088:8080"
+
+  spark-worker:
+    image: apache/spark:3.5.8-python3
+    container_name: rta-spark-worker
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      HOME: /tmp
+      SPARK_WORKER_CORES: 2
+      SPARK_WORKER_MEMORY: 2G
+      SPARK_WORKER_WEBUI_PORT: 8081
+    command: >
+      bash -lc "mkdir -p /tmp/.ivy2/cache /tmp/.ivy2/jars && /opt/spark/sbin/start-worker.sh spark://spark-master:7077 && tail -f /dev/null"
+    ports:
+      - "8081:8081"
+
+  airflow:
+    build:
+      context: .
+      dockerfile: docker/airflow/Dockerfile
+    container_name: rta-airflow
+    user: "${AIRFLOW_UID:-1000}:0"
+    env_file:
+      - .env
+    depends_on:
+      spark-master:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      bash -lc "mkdir -p /tmp/.ivy2/cache /tmp/.ivy2/jars && exec airflow standalone"
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: "True"
+      AIRFLOW_CONN_SPARK_DEFAULT: spark://spark-master:7077?deploy-mode=client&spark_binary=spark-submit
+      SNOWFLAKE_PRIVATE_KEY_FILE: /opt/airflow/secrets/snowflake/rsa_key.p8
+      KAFKA_BROKERS: kafka:29092
+      KAFKA_TOPIC_SIMULATION_REQUESTS: poker.simulation_requests
+      REDIS_URL: redis://redis:6379/0
+      PYTHON_BIN: /usr/local/bin/python3
+      PYTHONPATH: /opt/airflow/plugins:/opt/project:/opt/project/historical:/opt/project/ml_model:/opt/project/simulation
+      POKER_PLATFORM_RUNTIME_DIR: /tmp/poker_platform_runtime
+      STREAM_CHECKPOINT_PATH: /tmp/poker_platform_runtime/stream_checkpoints/poker
+      SPARK_MASTER_URL: local[*]
+      SPARK_DRIVER_MEMORY: 2g
+      SPARK_DRIVER_MAX_RESULT_SIZE: 1g
+      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-amd64
+      HOME: /tmp
+      _AIRFLOW_WWW_USER_USERNAME: airflow
+      _AIRFLOW_WWW_USER_PASSWORD: airflow
+      AIRFLOW_CONN_SNOWFLAKE_DEFAULT: >-
+        {"conn_type":"snowflake","login":"${SNOWFLAKE_USER}","password":"${SNOWFLAKE_PRIVATE_KEY_PASSPHRASE}","schema":"${SNOWFLAKE_SCHEMA}","extra":{"account":"${SNOWFLAKE_ACCOUNT}","database":"${SNOWFLAKE_DATABASE}","warehouse":"${SNOWFLAKE_WAREHOUSE}","role":"${SNOWFLAKE_ROLE}","private_key_file":"/opt/airflow/secrets/snowflake/rsa_key.p8"}}
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./jobs:/opt/airflow/jobs
+      - ./sql:/opt/project/sql
+      - ./sample_data:/opt/project/sample_data
+      - ./secrets/snowflake:/opt/airflow/secrets/snowflake:ro
+
+  spark-stream:
+    build:
+      context: .
+      dockerfile: docker/airflow/Dockerfile
+    container_name: rta-spark-stream
+    restart: unless-stopped
+    user: "0:0"
+    env_file:
+      - .env
+    depends_on:
+      spark-master:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    command: >
+      bash -lc "mkdir -p /tmp/.ivy2/cache /tmp/.ivy2/jars /tmp/poker_platform_runtime/stream_checkpoints/poker && /opt/spark/bin/spark-submit --master $${SPARK_MASTER_URL:-local[*]} --conf spark.driver.memory=$${SPARK_DRIVER_MEMORY:-2g} --conf spark.driver.maxResultSize=$${SPARK_DRIVER_MAX_RESULT_SIZE:-1g} --packages $${SPARK_KAFKA_PACKAGE:-org.apache.spark:spark-sql-kafka-0-10_2.12:3.5.8} /opt/project/jobs/stream_kafka.py --brokers kafka:29092 --topic poker.actions --summaries-topic poker.hand_summaries --events-topic poker.simulation_events --starting-offsets $${KAFKA_STREAM_STARTING_OFFSETS:-earliest} --checkpoint-path $${STREAM_CHECKPOINT_PATH:-/tmp/poker_platform_runtime/stream_checkpoints/poker}"
+    environment:
+      SNOWFLAKE_PRIVATE_KEY_FILE: /opt/airflow/secrets/snowflake/rsa_key.p8
+      KAFKA_TOPIC_SIMULATION_REQUESTS: poker.simulation_requests
+      KAFKA_TOPIC_ACTIONS: poker.actions
+      KAFKA_TOPIC_HAND_SUMMARIES: poker.hand_summaries
+      KAFKA_TOPIC_SIMULATION_EVENTS: poker.simulation_events
+      SPARK_MASTER_URL: local[*]
+      SPARK_DRIVER_MEMORY: 2g
+      SPARK_DRIVER_MAX_RESULT_SIZE: 1g
+      PYSPARK_PYTHON: python3
+      PYSPARK_DRIVER_PYTHON: python3
+      REDIS_URL: redis://redis:6379/0
+      KAFKA_STREAM_STARTING_OFFSETS: latest
+      POKER_PLATFORM_SKIP_SCHEMA_BOOTSTRAP: "1"
+      PYTHONPATH: /opt/airflow/plugins:/opt/project:/opt/project/historical:/opt/project/ml_model:/opt/project/simulation
+      POKER_PLATFORM_RUNTIME_DIR: /tmp/poker_platform_runtime
+      STREAM_CHECKPOINT_PATH: /tmp/poker_platform_runtime/stream_checkpoints/poker
+      HOME: /tmp
+    volumes:
+      - ./jobs:/opt/project/jobs
+      - ./sql:/opt/project/sql
+      - ./sample_data:/opt/project/sample_data
+      - poker-platform-runtime:/tmp/poker_platform_runtime
+      - ./secrets/snowflake:/opt/airflow/secrets/snowflake:ro
+
+volumes:
+  poker-platform-runtime:
+  postgres-data:

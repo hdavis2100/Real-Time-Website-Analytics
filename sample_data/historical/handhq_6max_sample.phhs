@@ -1,0 +1,83 @@
+[1]
+variant = 'NT'
+ante_trimming_status = false
+antes = [0, 0, 0, 0, 0, 0]
+blinds_or_straddles = [0.25, 0.50, 0, 0, 0, 0]
+min_bet = 0.50
+starting_stacks = [40.90, 42.95, 17.85, 22.60, 187.45, 70.85]
+actions = ['d dh p1 ????', 'd dh p2 ????', 'd dh p3 ????', 'd dh p4 ????', 'd dh p5 ????', 'd dh p6 ????', 'p3 f', 'p4 f', 'p5 f', 'p6 cbr 1.50', 'p1 f', 'p2 cc', 'd db Th5c3s', 'p2 cc', 'p6 cbr 2.50', 'p2 cc', 'd db 4d', 'p2 cc', 'p6 cc', 'd db 7h', 'p2 cc', 'p6 cbr 5.50', 'p2 cc', 'p6 sm Kd2d', 'p2 sm QdQh']
+venue = 'PokerStars'
+time = 00:00:06
+day = 1
+month = 7
+year = 2009
+hand = 59937798704
+seats = [6, 1, 2, 3, 4, 5]
+seat_count = 6
+table = 'kgbJRsxfv64KrErDRBAkcw'
+players = ['token_a', 'token_b', 'token_c', 'token_d', 'token_e', 'token_f']
+currency_symbol = '$'
+time_zone_abbreviation = 'ET'
+
+[2]
+variant = 'NT'
+ante_trimming_status = false
+antes = [0, 0, 0, 0, 0, 0]
+blinds_or_straddles = [0.25, 0.50, 0, 0, 0, 0]
+min_bet = 0.50
+starting_stacks = [64.05, 57.65, 28.40, 61.85, 42.45, 19.70]
+actions = ['d dh p1 ????', 'd dh p2 ????', 'd dh p3 ????', 'd dh p4 ????', 'd dh p5 ????', 'd dh p6 ????', 'p3 cc', 'p4 f', 'p5 f', 'p6 cc', 'p1 cc', 'p2 cc', 'd db 8cQcAh', 'p1 cc', 'p2 cc', 'p3 cc', 'p6 cc', 'd db 2c', 'p1 cbr 1', 'p2 f', 'p3 cc', 'p6 f', 'd db 7c', 'p1 cc', 'p3 cc', 'p1 sm AdKd', 'p3 sm ????']
+venue = 'PokerStars'
+time = 00:00:17
+day = 1
+month = 7
+year = 2009
+hand = 59937806534
+seats = [2, 3, 4, 5, 6, 1]
+seat_count = 6
+table = 'MJxeZCzYELxiIsyUZyT0jw'
+players = ['token_a', 'token_b', 'token_c', 'token_d', 'token_e', 'token_f']
+currency_symbol = '$'
+time_zone_abbreviation = 'ET'
+
+[3]
+variant = 'NT'
+ante_trimming_status = false
+antes = [0, 0, 0, 0, 0, 0, 0]
+blinds_or_straddles = [0.25, 0.50, 0, 0, 0, 0, 0]
+min_bet = 0.50
+starting_stacks = [16.50, 43.65, 30.90, 31.80, 9.75, 13.35, 123]
+actions = ['d dh p1 ????', 'd dh p2 ????', 'd dh p3 ????', 'd dh p4 ????', 'd dh p5 ????', 'd dh p6 ????', 'd dh p7 ????', 'p3 f', 'p4 f', 'p5 f', 'p6 f', 'p7 f', 'p1 cbr 1.50', 'p2 cc']
+venue = 'PokerStars'
+time = 00:00:02
+day = 1
+month = 7
+year = 2009
+hand = 59937795962
+seats = [4, 5, 6, 8, 9, 1, 3]
+seat_count = 9
+table = 'iq+aXfWVQRdV0u8SRTYUEg'
+players = ['token_a', 'token_b', 'token_c', 'token_d', 'token_e', 'token_f', 'token_g']
+currency_symbol = '$'
+time_zone_abbreviation = 'ET'
+
+[4]
+variant = 'NT'
+ante_trimming_status = false
+antes = [0, 0, 0, 0, 0]
+blinds_or_straddles = [0.25, 0.50, 0, 0, 0]
+min_bet = 0.50
+starting_stacks = [42.45, 17.85, 22.60, 71.60, 40.65]
+actions = ['d dh p1 ????', 'd dh p2 ????', 'd dh p3 ????', 'd dh p4 ????', 'd dh p5 ????', 'p3 cbr 1.00', 'p4 f', 'p5 f', 'p1 f', 'p2 cc']
+venue = 'PokerStars'
+time = 00:00:25
+day = 1
+month = 7
+year = 2009
+hand = 59937812206
+seats = [1, 2, 3, 5, 6]
+seat_count = 6
+table = 'QOgaEqMcJ73pcUMMxoisUg'
+players = ['token_a', 'token_b', 'token_c', 'token_d', 'token_e']
+currency_symbol = '$'
+time_zone_abbreviation = 'ET'

@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Poker Simulation App</title>
+    <link rel="stylesheet" href="/app/assets/app.css" />
+  </head>
+  <body>
+    <div id="global-message" class="flash-banner"></div>
+    <div id="global-error" class="flash-banner"></div>
+
+    <main id="auth-shell" class="auth-shell">
+      <section class="auth-hero">
+        <div class="auth-copy">
+          <p class="eyebrow">Poker Control Room</p>
+          <h1>Sign in to launch simulations, inspect live edges, and track model outcomes.</h1>
+          <p class="hero-copy">
+            Sign in to keep your agents and runs tied to your workspace.
+          </p>
+          <div class="row">
+            <a id="auth-dashboard-link" class="button primary link" href="http://localhost:8501" target="_blank" rel="noreferrer">
+              Open Dashboard
+            </a>
+          </div>
+        </div>
+
+        <div class="auth-panels">
+          <article class="auth-card">
+            <div class="panel-head auth-head">
+              <div>
+                <h2>Sign In</h2>
+                <p class="panel-copy">Use your existing account to get back into the console.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <form id="login-form" class="stack">
+                <div class="field">
+                  <label for="login-email">Email</label>
+                  <input id="login-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+                </div>
+                <div class="field">
+                  <label for="login-password">Password</label>
+                  <input id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required />
+                </div>
+                <button class="primary" type="submit">Sign In</button>
+              </form>
+            </div>
+          </article>
+
+          <article class="auth-card auth-card-accent">
+            <div class="panel-head auth-head">
+              <div>
+                <h2>Create Account</h2>
+                <p class="panel-copy">Passwords need at least 8 characters and must include a letter and a number.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <form id="register-form" class="stack">
+                <div class="field">
+                  <label for="register-display-name">Display Name</label>
+                  <input id="register-display-name" name="display_name" autocomplete="name" placeholder="River Captain" required />
+                </div>
+                <div class="field">
+                  <label for="register-email">Email</label>
+                  <input id="register-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required />
+                </div>
+                <div class="field">
+                  <label for="register-password">Password</label>
+                  <input id="register-password" name="password" type="password" autocomplete="new-password" placeholder="Choose a strong password" required />
+                </div>
+                <div class="field">
+                  <label for="register-password-confirm">Confirm Password</label>
+                  <input id="register-password-confirm" name="password_confirm" type="password" autocomplete="new-password" placeholder="Repeat your password" required />
+                </div>
+                <button class="primary" type="submit">Create Account</button>
+              </form>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <main id="app-shell" class="app-shell is-hidden">
+      <section class="hero">
+        <div class="hero-top">
+          <div>
+            <p class="eyebrow">Simulation Console</p>
+            <h1>Run agents, inspect live edges, and profile outcomes in one place.</h1>
+            <p class="hero-copy">
+              Create agent contexts, launch simulations, watch progress, and review results from one focused workspace.
+            </p>
+          </div>
+          <div class="hero-actions">
+            <a id="dashboard-link" class="button primary link" href="http://localhost:8501" target="_blank" rel="noreferrer">
+              Open Dashboard
+            </a>
+            <button id="refresh-runs" class="secondary" type="button">Refresh Runs</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="grid">
+        <section class="column">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Account</h2>
+                <p class="panel-copy">Your saved agents and runs are scoped to the signed-in account.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="session-card">
+                <div id="session-status"></div>
+                <div class="stack">
+                  <div class="row">
+                    <button id="session-clear" class="secondary" type="button">Sign Out</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Saved Agents</h2>
+                <p class="panel-copy">Create named agent contexts and reuse their latest versions when launching simulations.</p>
+              </div>
+            </div>
+            <div class="panel-body stack">
+              <form id="agent-form" class="stack">
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="agent-name">Agent Name</label>
+                    <input id="agent-name" name="name" placeholder="River Captain" />
+                  </div>
+                  <div class="field">
+                    <label for="agent-backend">Default Strategy</label>
+                    <select id="agent-backend" name="decision_backend_default">
+                      <option value="llm">LLM</option>
+                      <option value="heuristic">heuristic</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="agent-description">Description</label>
+                  <input id="agent-description" name="description" placeholder="Short exploit summary" />
+                </div>
+                <div class="field">
+                  <label for="agent-context">Initial Context</label>
+                  <textarea id="agent-context" name="context" placeholder="Balanced aggressive value bettor who pressures capped ranges..."></textarea>
+                </div>
+                <button class="primary" type="submit">Create Agent</button>
+              </form>
+
+              <div id="agents-container" class="list"></div>
+
+              <div class="stack">
+                <h3 id="selected-agent-name">Select an agent above</h3>
+                <form id="agent-version-form" class="stack">
+                  <div class="field">
+                    <label for="agent-version-context">Create New Version</label>
+                    <textarea id="agent-version-context" name="context" placeholder="Tighten river bluffs against station-heavy pools..."></textarea>
+                  </div>
+                  <div class="row">
+                    <div class="field" style="flex: 1 1 220px;">
+                      <label for="agent-version-backend">Default Strategy</label>
+                      <select id="agent-version-backend" name="decision_backend_default">
+                        <option value="llm">LLM</option>
+                        <option value="heuristic">heuristic</option>
+                      </select>
+                    </div>
+                    <div class="field" style="align-self: end;">
+                      <button class="secondary" type="submit">Create Version</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+
+              <div id="agent-detail" class="stack"></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="column">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Launch Simulation</h2>
+                <p class="panel-copy">Start a new simulation from a saved agent or a one-off strategy note.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <form id="run-form" class="stack">
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="run-id">Simulation Run ID</label>
+                    <input id="run-id" name="simulation_run_id" placeholder="Leave blank for auto-generated ID" />
+                  </div>
+                  <div class="field">
+                    <label for="run-agent-version">Saved Agent Version</label>
+                    <select id="run-agent-version" name="agent_version_id"></select>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="run-context">Ad-hoc Context</label>
+                  <textarea id="run-context" name="context" placeholder="Optional when a saved agent version is selected."></textarea>
+                </div>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="run-backend">Strategy Type</label>
+                    <select id="run-backend" name="decision_backend">
+                      <option value="llm">LLM</option>
+                      <option value="heuristic">heuristic</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="run-hands">Hand Count</label>
+                    <input id="run-hands" name="hand_count" type="number" min="1" max="5000" value="250" />
+                  </div>
+                </div>
+                <button class="primary" type="submit">Queue Simulation</button>
+              </form>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>My Runs</h2>
+                <p class="panel-copy">Recent runs for your account. Pick one to watch progress and review results.</p>
+              </div>
+              <button id="refresh-run" class="subtle" type="button">Refresh Selected Run</button>
+            </div>
+            <div class="panel-body">
+              <div id="runs-container" class="list"></div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Run Detail</h2>
+                <p class="panel-copy">Live progress, final results, and player profiles for the selected simulation.</p>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div id="run-detail"></div>
+            </div>
+          </article>
+
+        </section>
+      </div>
+
+      <p class="footer-note">
+        Keep building agents, launching runs, and reviewing results from one place.
+      </p>
+    </main>
+    <script type="module" src="/app/assets/app.js"></script>
+  </body>
+  </html>

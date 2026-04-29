@@ -1,0 +1,79 @@
+# Node / frontend
+node_modules/
+npm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.eggs/
+*.egg-info/
+.venv/
+venv/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local environment
+.env
+
+# Runtime outputs
+runtime/
+data/
+airflow/logs/
+checkpoints/
+tmp/
+*.log
+*.out
+*.err
+
+# Local archive / handoff outputs
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+
+# Spark / stream checkpoints
+*_checkpoint/
+stream_metrics/
+stream_raw/
+
+# Secrets
+secrets/
+!secrets/
+secrets/*
+!secrets/snowflake/
+secrets/snowflake/*
+!secrets/snowflake/.gitkeep
+*.pem
+*.p8
+*.pub
+*.key
+
+# ML / dashboards
+artifacts/
+models/
+reports/
+
+# Historical data downloads
+sample_data/downloads/
+sample_data/historical/phh-dataset/
+sample_data/historical/handhq/
+sample_data/historical/handhq-*/
+sample_data/historical/**/*.zip
+sample_data/historical/**/*.tar
+sample_data/historical/**/*.tar.gz
+sample_data/historical/**/*.tgz
+sample_data/historical/**/*.7z
+
+# Accidental nested repo copies
+real-time-analytics/
+rta_fixed/

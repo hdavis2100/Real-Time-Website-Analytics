@@ -1,0 +1,26 @@
+{
+  "name": "real-time-analytics",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "simulation/src/server.js",
+  "scripts": {
+    "start": "node simulation/src/server.js",
+    "dev": "nodemon simulation/src/server.js",
+    "migrate:app-db": "node simulation/scripts/migrate-app-db.js",
+    "project:simulation-events": "node simulation/scripts/project-simulation-events.js",
+    "simulate": "node simulation/scripts/simulate.js",
+    "test": "node --test simulation/test/api.test.js simulation/test/finalizing-run-reconciler.test.js simulation/test/simulation-event-projector.test.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.0",
+    "express": "^5.2.1",
+    "kafkajs": "^2.2.4",
+    "morgan": "^1.10.1",
+    "pg": "^8.16.3",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
